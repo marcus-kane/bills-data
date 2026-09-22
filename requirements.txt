@@ -1,4 +1,7 @@
 # Core
+# nfl_data_py's pandas<2.0 pin is stale (code works fine on 2.x, no wheel for
+# pandas 1.x on py3.12 anyway) -- install with `pip install --no-deps nfl_data_py`
+# then the rest of this file normally.
 nfl_data_py>=0.3.3
 polars>=1.0
 duckdb>=1.1
