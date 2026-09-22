@@ -108,6 +108,25 @@ def bills_era_summary(decisions: pl.DataFrame) -> pl.DataFrame:
     )
 
 
+def brady_tracker(decisions: pl.DataFrame) -> pl.DataFrame:
+    """Every Brady-era (2026) Bills 4th down, in game order, with a running
+    season-to-date cost so the gap can be watched week over week."""
+    return (
+        decisions.filter((pl.col("posteam") == "BUF") & (pl.col("season") >= BRADY_START))
+        .sort(["week", "game_id"])
+        .select(
+            "season", "week", "game_id", "defteam", "qtr", "ydstogo", "yardline_100",
+            "score_differential", "actual_decision", "best_decision",
+            "wp_cost_pts", "followed_baseline", "epa",
+        )
+        .with_columns(
+            pl.col("wp_cost_pts").cum_sum().round(2).alias("cum_wp_cost_pts"),
+            ((pl.col("followed_baseline").cast(pl.Int32).cum_sum())
+             / pl.int_range(1, pl.len() + 1) * 100).round(1).alias("cum_pct_followed_baseline"),
+        )
+    )
+
+
 def _demo() -> None:
     con = duckdb.connect(str(DB), read_only=True)
     try:

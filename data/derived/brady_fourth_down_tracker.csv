@@ -1,0 +1,9 @@
+season,week,game_id,defteam,qtr,ydstogo,yardline_100,score_differential,actual_decision,best_decision,wp_cost_pts,followed_baseline,epa,cum_wp_cost_pts,cum_pct_followed_baseline
+2026,1,2026_01_BUF_HOU,HOU,1.0,1.0,34.0,0.0,go,go,0.0,true,-4.2453833,0.0,100.0
+2026,1,2026_01_BUF_HOU,HOU,1.0,6.0,28.0,0.0,field_goal,field_goal,0.0,true,1.0101845,0.0,100.0
+2026,1,2026_01_BUF_HOU,HOU,3.0,12.0,67.0,3.0,punt,punt,0.0,true,1.1863803,0.0,100.0
+2026,1,2026_01_BUF_HOU,HOU,3.0,10.0,16.0,3.0,field_goal,field_goal,0.0,true,0.29060817,0.0,100.0
+2026,1,2026_01_BUF_HOU,HOU,4.0,4.0,14.0,-1.0,field_goal,field_goal,0.0,true,0.2398895,0.0,100.0
+2026,1,2026_01_BUF_HOU,HOU,4.0,12.0,82.0,-1.0,punt,punt,0.0,true,-0.11338733,0.0,100.0
+2026,2,2026_02_DET_BUF,DET,2.0,5.0,65.0,20.0,punt,punt,0.0,true,-0.02153484,0.0,100.0
+2026,2,2026_02_DET_BUF,DET,4.0,8.0,50.0,10.0,punt,punt,0.0,true,0.1792875,0.0,100.0
