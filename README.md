@@ -22,9 +22,9 @@ Question 4 is infrastructure for the other three.
 
 | Phase | What | State |
 |---|---|---|
-| 0 | Spine: data pull, cache, DuckDB, `refresh.py` | in progress |
-| 1 | Fourth-down audit | not started |
-| 2 | Opponent adjustment | not started |
+| 0 | Spine: data pull, cache, DuckDB, `refresh.py` | done |
+| 1 | Fourth-down audit | done — live weekly tracker |
+| 2 | Opponent adjustment | done — validated out-of-sample |
 | 3 | Allen off-script | not started |
 | 4 | Stadium wind study (capstone) | not started |
 | 5 | Publish | not started |
@@ -34,13 +34,15 @@ Question 4 is infrastructure for the other three.
 ```
 data/raw/      parquet cache, one dir per source (gitignored)
 data/db/       bills.duckdb (gitignored)
+data/derived/  committed output tables (e.g. the weekly 4th-down tracker)
 src/           analysis modules
 notebooks/     exploration only — nothing ships from here
 charting/      hand-charted data + codebook (this is the differentiator)
 posts/         weekly writeups
 figures/       generated charts (gitignored)
 docs/          plan of action, methodology notes
-refresh.py     re-pull current season, rebuild the db
+refresh.py         re-pull current season, rebuild the db
+weekly_tracker.py  regenerate the live Brady 4th-down tracker
 predictions.md timestamped predictions, logged BEFORE the numbers are run
 ```
 
