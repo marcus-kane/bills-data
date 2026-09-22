@@ -11,12 +11,15 @@ Bills game (and any Tuesday once nflverse has finished the nightly update).
 from __future__ import annotations
 
 import argparse
+import tempfile
 import warnings
 from pathlib import Path
 
 import duckdb
 import nfl_data_py as nfl
 import pandas as pd
+import pyreadr
+import requests
 
 CURRENT_SEASON = 2026
 HISTORY_START = 2016      # pbp / NGS / participation floor
@@ -45,6 +48,24 @@ def _fetch_pfr_advanced(season: int) -> pd.DataFrame:
     return pd.concat(frames, ignore_index=True)
 
 
+def _fetch_nfl4th(season: int) -> pd.DataFrame:
+    """4th-down go/punt/kick win probabilities, precomputed by the nfl4th R
+    package and released as per-season .rds files (no parquet upstream)."""
+    url = (
+        "https://github.com/nflverse/nfl4th/releases/download/"
+        f"nfl4th_infrastructure/pre_computed_go_boost_{season}.rds"
+    )
+    resp = requests.get(url, timeout=60)
+    resp.raise_for_status()
+    with tempfile.NamedTemporaryFile(suffix=".rds", delete=False) as f:
+        f.write(resp.content)
+        tmp_path = f.name
+    try:
+        return pyreadr.read_r(tmp_path)[None]
+    finally:
+        Path(tmp_path).unlink()
+
+
 # source name -> (earliest season available, fetch(season) -> DataFrame)
 SOURCES = {
     "pbp": (HISTORY_START, lambda season: nfl.import_pbp_data([season], downcast=True)),
@@ -54,6 +75,7 @@ SOURCES = {
     "pfr_advanced_weekly": (PFR_START, _fetch_pfr_advanced),
     "schedules": (HISTORY_START, lambda season: nfl.import_schedules([season])),
     "injuries": (HISTORY_START, lambda season: nfl.import_injuries([season])),
+    "nfl4th_go_boost": (HISTORY_START, _fetch_nfl4th),
 }
 
 

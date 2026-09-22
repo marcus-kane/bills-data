@@ -7,6 +7,8 @@ polars>=1.0
 duckdb>=1.1
 pyarrow>=17.0
 pandas>=2.2
+requests>=2.30
+pyreadr>=0.5  # reads nfl4th's precomputed 4th-down .rds releases (no parquet upstream)
 
 # Weather interpolation (project 1)
 meteostat>=1.6.8
