@@ -1,0 +1,17 @@
+# Core
+nfl_data_py>=0.3.3
+polars>=1.0
+duckdb>=1.1
+pyarrow>=17.0
+pandas>=2.2
+
+# Weather interpolation (project 1)
+meteostat>=1.6.8
+
+# Modeling (project 2 opponent adjustment)
+numpy>=1.26
+scipy>=1.13
+scikit-learn>=1.5
+
+# Charts + site
+matplotlib>=3.9

@@ -1,0 +1,29 @@
+# Python
+.venv/
+venv/
+__pycache__/
+*.py[cod]
+.ipynb_checkpoints/
+.python-version
+
+# Data — cached pulls are reproducible via refresh.py, don't commit them
+data/raw/*
+!data/raw/.gitkeep
+data/db/*
+!data/db/.gitkeep
+*.parquet
+*.duckdb
+*.duckdb.wal
+
+# Figures are regenerated
+figures/*
+!figures/.gitkeep
+
+# Env / secrets
+.env
+.env.*
+
+# OS / editor
+.DS_Store
+Thumbs.db
+.vscode/settings.json
