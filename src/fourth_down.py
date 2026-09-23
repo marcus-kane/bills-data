@@ -1,7 +1,7 @@
 """Fourth-down decision audit.
 
-Q2: is Joe Brady (Bills OC as of 2026) a better fourth-down decision maker
-than the McDermott-era Bills? See docs/plan-of-action.md.
+Q2: is Joe Brady (Bills head coach and play-caller from 2026; McDermott was
+fired Jan 2026) a better fourth-down decision maker than the McDermott-era Bills? See docs/plan-of-action.md.
 
 The baseline isn't raw EPA -- it's the nfl4th win-probability model (go_wp /
 punt_wp / fg_wp per play, from the nflverse `nfl4th` R package's precomputed
@@ -21,7 +21,7 @@ import polars as pl
 
 DB = Path("data/db/bills.duckdb")
 MCDERMOTT_START = 2017  # Rex Ryan/Anthony Lynn through 2016; McDermott hired 2017
-BRADY_START = 2026      # Joe Brady's first season as Bills OC
+BRADY_START = 2026      # Joe Brady's first season as Bills head coach
 
 
 def load_decisions(con: duckdb.DuckDBPyConnection, team: str | None = None) -> pl.DataFrame:

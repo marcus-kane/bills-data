@@ -32,23 +32,50 @@ a chance on the FG rate going up a bit, even though it depends a lot on the
 kicker.
 **Result:**
 
-## 2026-09-21 — Q2: Brady vs McDermott on fourth down
+## 2026-09-23 00:02 CDT — Q2: Brady vs McDermott on fourth down
 
-**Prediction:**
-**Confidence:**
-**Why:**
+*Logged late: the Phase 1 audit (including Brady's Weeks 1–2) ran on
+2026-09-21, before this entry. This predicts the rest of the 2026 season.*
+
+**Prediction:** On 4th downs where the nfl4th model's best call is "go," the
+2026 Bills (Brady, head coach and play-caller) go for it at a higher rate
+than the 2017–2025 Bills (McDermott), as of the end of the regular season.
+**Confidence:** High
+**Why:** Early in the season Brady has been aggressive and put the ball in his
+best players' hands in the big moments. He's a modern coach who trusts the
+numbers and trusts his QB, so he'll go for it when the numbers say go.
 **Result:**
 
-## 2026-09-21 — Q3: Allen off-script
+## 2026-09-23 00:08 CDT — Q3: Allen off-script
 
-**Prediction:**
-**Confidence:**
-**Why:**
+**Prediction:** Two parts, 2026 regular season vs Allen's 2022–2025, from
+`src/off_script.py` (off-script = FTN out-of-pocket or scramble):
+1. Allen's off-script rate goes up, but only barely: 0 to +3 pts.
+2. His opponent-adjusted EPA per play on off-script dropbacks goes up.
+**Confidence:** Medium
+**Why:** Brady's scheme will let Josh be creative and use his legs: move the
+pocket, slide protections, step up, run, and create plays more than he did
+under McDermott. McDermott wanted to stay on schedule, leaned on screens and
+tried to limit Josh's playmaking. Brady will embrace it. The rate barely
+increases, but his success on broken-down plays goes up.
 **Result:**
 
-## 2026-09-21 — Q4: defense vs schedule
+## 2026-09-23 00:08 CDT — Q4: defense vs schedule
 
-**Prediction:**
-**Confidence:**
-**Why:**
+*Logged late: the Phase 2 opponent adjustment (including 2026 season-to-date
+ratings) ran on 2026-09-22, before this entry.*
+
+**Prediction:** At the end of the 2026 regular season, the Bills' opponent-
+adjusted defense (Leonhard) ranks within 5 spots of the 2025 Bills'
+(McDermott's last season). How to read it:
+- More than 5 spots better: that's the answer, Leonhard's defense is better.
+- Within 5 spots: similar, and one season is too small a sample to say.
+- More than 5 spots worse: cause for concern.
+**Confidence:** Medium
+**Why:** This defense is mostly players from McDermott's scheme. Leonhard has
+hinted in his pressers that he has his scheme but not his perfect pieces yet.
+Those players spent years in McDermott's 4-3, and Leonhard is bringing in a
+lot of new scheme changes and roles. The defense only added talent and didn't
+lose many key pieces from last year, so McDermott's defense should be the
+floor for the defenses that come after it.
 **Result:**

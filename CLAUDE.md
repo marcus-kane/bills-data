@@ -47,6 +47,9 @@ Four questions, each falsifiable:
   drops any game under 95% charted rather than using a partial chart.
 - `meteostat` is on the 2.x API. Wind direction must be blended as u/v vectors,
   never averaged as degrees (`src/weather.py`).
+- nflverse `schedules.home_coach/away_coach` still says McDermott for BUF 2026.
+  It's stale: Brady was named head coach Jan 27, 2026. Don't trust that field for
+  era splits; split on season.
 - Participation data (personnel, coverage, man/zone) is **postseason only** — useless
   for in-season weekly posts.
 - n for the new stadium this season is ~9–10 home games. Nothing stadium-specific
