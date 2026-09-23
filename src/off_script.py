@@ -28,7 +28,7 @@ import duckdb
 import numpy as np
 import polars as pl
 
-from opponent_adjustment import WP_HIGH, WP_LOW, current_ratings
+from opponent_adjustment import MIN_GAMES, WP_HIGH, WP_LOW, current_ratings
 
 DB = Path("data/db/bills.duckdb")
 ALLEN_ID = "00-0034857"
@@ -126,7 +126,11 @@ def bootstrap(plays: pl.DataFrame, epa_col: str = "epa_adj", n_boot: int = N_BOO
         return {"off_rate": n_off / n, "epa_on": epa_on, "epa_off": epa_off, "gap": epa_off - epa_on}
 
 
-def interval(draws: np.ndarray, level: float = 0.9) -> tuple[float, float]:
+def interval(draws: np.ndarray, n_games: int, level: float = 0.9) -> tuple[float, float]:
+    """Percentile interval, or NaN when there are too few games to resample
+    (see MIN_GAMES in opponent_adjustment.py)."""
+    if n_games < MIN_GAMES:
+        return float("nan"), float("nan")
     lo = (1 - level) / 2
     return tuple(np.nanquantile(draws, [lo, 1 - lo]))
 
@@ -158,12 +162,13 @@ def era_shift(plays: pl.DataFrame, passer_id: str = ALLEN_ID, split: int = BRADY
     before, after = qb.filter(pl.col("season") < split), qb.filter(pl.col("season") >= split)
     b_draws, a_draws = bootstrap(before, seed=1), bootstrap(after, seed=2)
     b_pt, a_pt = summarize(before), summarize(after)
+    b_games, a_games = before["game_id"].n_unique(), after["game_id"].n_unique()
 
     rows = []
     for stat in ("off_rate", "epa_on", "epa_off", "gap"):
-        b_lo, b_hi = interval(b_draws[stat])
-        a_lo, a_hi = interval(a_draws[stat])
-        d_lo, d_hi = interval(a_draws[stat] - b_draws[stat])
+        b_lo, b_hi = interval(b_draws[stat], b_games)
+        a_lo, a_hi = interval(a_draws[stat], a_games)
+        d_lo, d_hi = interval(a_draws[stat] - b_draws[stat], min(b_games, a_games))
         rows.append({
             "stat": stat,
             "before": b_pt[stat], "before_lo": b_lo, "before_hi": b_hi,
@@ -171,7 +176,8 @@ def era_shift(plays: pl.DataFrame, passer_id: str = ALLEN_ID, split: int = BRADY
             "change": a_pt[stat] - b_pt[stat], "change_lo": d_lo, "change_hi": d_hi,
         })
     return pl.DataFrame(rows).with_columns(
-        pl.lit(before.height).alias("n_before"), pl.lit(after.height).alias("n_after")
+        pl.lit(before.height).alias("n_before"), pl.lit(after.height).alias("n_after"),
+        pl.lit(b_games).alias("games_before"), pl.lit(a_games).alias("games_after"),
     )
 
 
@@ -205,18 +211,20 @@ def era_table(plays: pl.DataFrame, passer_id: str = ALLEN_ID) -> pl.DataFrame:
             continue
         league_rate = era_plays.filter(~is_qb)["off_script"].mean()
         pt, draws = summarize(qb), bootstrap(qb, seed=i)
+        games = qb["game_id"].n_unique()
         pt["off_rate_vs_league"] = pt["off_rate"] - league_rate
         draws["off_rate_vs_league"] = draws["off_rate"] - league_rate
 
         for stat in STATS:
-            lo, hi = interval(draws[stat])
-            row = {"era": label, "stat": stat, "n": qb.height, "value": pt[stat], "lo": lo, "hi": hi,
+            lo, hi = interval(draws[stat], games)
+            row = {"era": label, "stat": stat, "n": qb.height, "games": games,
+                   "value": pt[stat], "lo": lo, "hi": hi,
                    "vs_prev": None, "vs_prev_lo": None, "vs_prev_hi": None}
             if prev:
-                d_lo, d_hi = interval(draws[stat] - prev[1][stat])
+                d_lo, d_hi = interval(draws[stat] - prev[1][stat], min(games, prev[2]))
                 row |= {"vs_prev": pt[stat] - prev[0][stat], "vs_prev_lo": d_lo, "vs_prev_hi": d_hi}
             rows.append(row)
-        prev = (pt, draws)
+        prev = (pt, draws, games)
     return pl.DataFrame(rows)
 
 
@@ -230,6 +238,8 @@ def _check_bootstrap() -> None:
     d = bootstrap(fake, n_boot=200)
     assert np.allclose(d["off_rate"], 0.3) and np.allclose(d["gap"], 1.0), d
     assert summarize(fake)["gap"] == 1.0
+    assert np.isnan(interval(d["off_rate"], n_games=MIN_GAMES - 1)).all()
+    assert not np.isnan(interval(d["off_rate"], n_games=10)).any()
 
     eras = tag_era(pl.DataFrame({"season": [2022, 2023, 2023, 2025, 2026], "week": [18, 10, 11, 1, 1]}))["era"]
     assert eras.to_list() == ["dorsey_oc", "dorsey_oc", "brady_oc", "brady_oc", "brady_hc"], eras

@@ -50,6 +50,10 @@ Four questions, each falsifiable:
 - nflverse `schedules.home_coach/away_coach` still says McDermott for BUF 2026.
   It's stale: Brady was named head coach Jan 27, 2026. Don't trust that field for
   era splits; split on season.
+- Opponent adjustment uses `ALPHA = 300` (the walk-forward winner). Until Sept 2026
+  `current_ratings()` silently defaulted to 30; anything computed before then used it.
+- Game-clustered bootstrap intervals are NaN below `MIN_GAMES = 4` (a team or QB
+  with 2 games has 3 distinct resamples). Bands stay optimistic until ~10 games.
 - Participation data (personnel, coverage, man/zone) is **postseason only** — useless
   for in-season weekly posts.
 - n for the new stadium this season is ~9–10 home games. Nothing stadium-specific
@@ -86,6 +90,10 @@ In progress:
   `weather` table via `refresh.py`. Still needed before the fit: coordinates for
   every outdoor stadium, and field azimuths measured for old and new Highmark
   (both placeholders at 0°).
+
+Weekly: `python refresh.py && python weekly_tracker.py` writes every table the
+post needs to `data/derived/`, including the numbers each logged prediction is
+scored on.
 
 Not started: first weekly post, hand-charting codebook, Phase 5.
 

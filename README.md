@@ -42,7 +42,7 @@ posts/         weekly writeups
 figures/       generated charts (gitignored)
 docs/          plan of action, methodology notes
 refresh.py         re-pull current season, rebuild the db
-weekly_tracker.py  regenerate the live Brady 4th-down tracker
+weekly_tracker.py  regenerate every weekly table (Q2-Q4) in data/derived/
 predictions.md timestamped predictions, logged BEFORE the numbers are run
 ```
 

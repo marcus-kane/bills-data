@@ -17,6 +17,7 @@ from __future__ import annotations
 from pathlib import Path
 
 import duckdb
+import numpy as np
 import polars as pl
 
 DB = Path("data/db/bills.duckdb")
@@ -97,15 +98,29 @@ def bills_era_summary(decisions: pl.DataFrame) -> pl.DataFrame:
         .otherwise(pl.lit(f"mcdermott_{MCDERMOTT_START}_{BRADY_START - 1}"))
         .alias("era")
     )
+    go_call = pl.col("best_decision") == "go"
     return (
         buf.group_by("era")
         .agg(
             pl.len().alias("n"),
             pl.col("followed_baseline").mean().alias("pct_followed_baseline"),
             pl.col("wp_cost_pts").mean().alias("avg_wp_cost_pts"),
+            # Q2 as logged: when the model says go, how often do they go?
+            go_call.sum().alias("n_go_calls"),
+            (pl.col("actual_decision") == "go").filter(go_call).sum().alias("went_on_go_calls"),
         )
+        .with_columns(_wilson("went_on_go_calls", "n_go_calls", "go_rate_on_go_calls"))
         .sort("era")
     )
+
+
+def _wilson(k: str, n: str, name: str, z: float = 1.645) -> list[pl.Expr]:
+    """Rate with a 90% Wilson interval. Fourth downs are few per game, so
+    treating them as independent (no game clustering) costs little here."""
+    p = pl.col(k) / pl.col(n)
+    center = (p + z**2 / (2 * pl.col(n))) / (1 + z**2 / pl.col(n))
+    half = z * ((p * (1 - p) / pl.col(n) + z**2 / (4 * pl.col(n) ** 2)).sqrt()) / (1 + z**2 / pl.col(n))
+    return [p.alias(name), (center - half).alias(f"{name}_lo"), (center + half).alias(f"{name}_hi")]
 
 
 def brady_tracker(decisions: pl.DataFrame) -> pl.DataFrame:
@@ -133,6 +148,9 @@ def _demo() -> None:
         decisions = load_decisions(con)
     finally:
         con.close()
+
+    w = pl.DataFrame({"k": [5], "n": [10]}).select(_wilson("k", "n", "r")).row(0)
+    assert np.allclose(w, (0.5, 0.2692, 0.7308), atol=1e-3), w  # hand-computed, z=1.645
 
     assert decisions.height > 0, "no 4th-down plays joined -- check the nfl4th_go_boost join"
     assert set(decisions["actual_decision"].unique()) <= {"go", "punt", "field_goal"}
