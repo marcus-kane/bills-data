@@ -31,19 +31,21 @@ import polars as pl
 DB = Path("data/db/bills.duckdb")
 RAW = Path("data/raw")
 
-# stadium_id -> (lat, lon, elevation_m, IANA tz). New and old Highmark share
-# BUF00 and sit across the road from each other -- same weather point.
-# ponytail: Buffalo only. Q1 fits on every outdoor stadium 2016-2025; add
-# their coordinates here before the fit, the pull already keys on stadium_id.
-STADIUMS = {
-    "BUF00": (42.774, -78.787, 200, "America/New_York"),
-}
+# stadium_id -> lat, lon, altitude (m), heading (field long-axis bearing).
+# Source and checks: data/reference/README.md. New and old Highmark share
+# BUF00 and sit across the road from each other -- same weather point, but
+# NOT the same field: the reference heading (302) is the old stadium's.
+STADIUMS = pd.read_csv(Path("data/reference/stadiums.csv")).set_index("stadium_id")
 
-# Field axis bearing in degrees, per era. Calibration knob: CLAUDE.md says
-# "roughly north-south" -- measure both fields off satellite imagery before
-# anything gets published. Old and new Highmark are not guaranteed to match.
-FIELD_AZIMUTH_DEG = {"old": 0.0, "new": 0.0}
+# Calibration knob: the new Highmark's field bearing, measured off satellite
+# imagery (Google Earth ruler along a sideline). Until it's set, along/cross
+# wind for 2026+ Bills home games is NaN rather than borrowed from the old field.
+NEW_HIGHMARK_HEADING: float | None = None
 NEW_HIGHMARK_SEASON = 2026
+
+# nflverse schedules list every kickoff in US Eastern, whatever the venue
+# (London 09:30, Seattle 16:05 -- checked against first-snap UTC timestamps).
+SCHEDULE_TZ = "America/New_York"
 
 N_STATIONS = 4
 PAD = timedelta(hours=1)          # pull an hour either side of the game
@@ -89,15 +91,15 @@ def fetch_season(season: int) -> pd.DataFrame:
     """
     sched = pd.read_parquet(RAW / "schedules" / f"{season}.parquet")
     games = sched[
-        sched["stadium_id"].isin(STADIUMS.keys())
+        sched["stadium_id"].isin(STADIUMS.index)
         & (sched["roof"] == "outdoors")
         & sched["result"].notna()
     ]
     frames = []
     for g in games.itertuples():
-        lat, lon, elev, tz = STADIUMS[g.stadium_id]
-        kickoff = pd.Timestamp(f"{g.gameday} {g.gametime}").tz_localize(tz).tz_convert("UTC")
-        hourly = fetch_game_hourly(lat, lon, elev, kickoff - PAD, kickoff + GAME_LENGTH + PAD)
+        st = STADIUMS.loc[g.stadium_id]
+        kickoff = pd.Timestamp(f"{g.gameday} {g.gametime}").tz_localize(SCHEDULE_TZ).tz_convert("UTC")
+        hourly = fetch_game_hourly(st.lat, st.lon, int(st.altitude), kickoff - PAD, kickoff + GAME_LENGTH + PAD)
         hourly.insert(0, "game_id", g.game_id)
         hourly.insert(1, "stadium_id", g.stadium_id)
         frames.append(hourly)
@@ -136,17 +138,32 @@ def play_wind(con: duckdb.DuckDBPyConnection, season: int | None = None) -> pl.D
             gp[col] = np.interp(gp["t"], gw["t"], gw[col])  # clamps at the ends -- PAD keeps plays inside
         parts.append(gp)
     df = pd.concat(parts, ignore_index=True)
+    df["stadium_id"] = df["game_id"].map(weather.groupby("game_id")["stadium_id"].first())
 
     df["wspd_kmh"] = np.hypot(df["u_kmh"], df["v_kmh"])
     df["wdir_from"] = (np.rad2deg(np.arctan2(-df["u_kmh"], -df["v_kmh"])) + 360) % 360
-    azimuth = np.where(df["season"] >= NEW_HIGHMARK_SEASON, FIELD_AZIMUTH_DEG["new"], FIELD_AZIMUTH_DEG["old"])
-    rel = np.deg2rad(df["wdir_from"] - azimuth)
-    df["along_kmh"] = np.abs(df["wspd_kmh"] * np.cos(rel))
-    df["cross_kmh"] = np.abs(df["wspd_kmh"] * np.sin(rel))
+    df["field_heading"] = field_heading(df["stadium_id"], df["season"])
+    df["along_kmh"], df["cross_kmh"] = along_cross(df["wspd_kmh"], df["wdir_from"], df["field_heading"])
 
     return pl.from_pandas(
-        df[["game_id", "play_id", "season", "wspd_kmh", "wdir_from", "along_kmh", "cross_kmh"]]
+        df[["game_id", "play_id", "season", "stadium_id", "wspd_kmh", "wdir_from",
+            "field_heading", "along_kmh", "cross_kmh"]]
     )
+
+
+def field_heading(stadium_id: pd.Series, season: pd.Series) -> np.ndarray:
+    """Field long-axis bearing per play; the new Highmark is NaN until measured."""
+    heading = np.array(stadium_id.map(STADIUMS["heading"]), dtype=float)
+    new_highmark = ((stadium_id == "BUF00") & (season >= NEW_HIGHMARK_SEASON)).to_numpy()
+    heading[new_highmark] = np.nan if NEW_HIGHMARK_HEADING is None else NEW_HIGHMARK_HEADING
+    return heading
+
+
+def along_cross(speed, wdir_from, heading) -> tuple[np.ndarray, np.ndarray]:
+    """Unsigned wind components along and across the field axis. A field
+    runs both ways, so heading and heading + 180 give the same answer."""
+    rel = np.deg2rad(np.asarray(wdir_from) - np.asarray(heading))
+    return np.abs(speed * np.cos(rel)), np.abs(speed * np.sin(rel))
 
 
 def _demo() -> None:
@@ -154,6 +171,14 @@ def _demo() -> None:
     u, v = _uv(np.array([10.0, 10.0]), np.array([10.0, 350.0]))
     back = (np.rad2deg(np.arctan2(-u.mean(), -v.mean())) + 360) % 360
     assert min(back, 360 - back) < 1e-6, back
+
+    # a wind straight down the old Highmark's 302 axis is all along, no cross;
+    # the same wind at 90 degrees off it is all cross. Axis direction doesn't matter.
+    a, c = along_cross(10.0, np.array([302.0, 122.0, 32.0]), 302.0)
+    assert np.allclose(a, [10, 10, 0], atol=1e-9) and np.allclose(c, [0, 0, 10], atol=1e-9), (a, c)
+    h = field_heading(pd.Series(["BUF00", "BUF00", "GNB00"]), pd.Series([2025, 2026, 2026]))
+    assert h[0] == 302.0 and h[2] == 359.0
+    assert np.isnan(h[1]) == (NEW_HIGHMARK_HEADING is None)
 
     con = duckdb.connect(str(DB), read_only=True)
     try:

@@ -7,6 +7,7 @@ append-log drift) and prints the headline rows.
     python refresh.py && python weekly_tracker.py
 
 Writes:
+    stadium_q1.csv                 Bills deep-ball success + FG%, old vs new stadium (Q1)
     brady_fourth_down_tracker.csv  every Brady-era 4th down, running totals
     fourth_down_eras.csv           McDermott vs Brady, incl. Q2's go-rate on go-calls
     allen_off_script_eras.csv      Allen by play-caller era (Q3)
@@ -26,6 +27,7 @@ sys.path.insert(0, str(Path(__file__).parent / "src"))
 from fourth_down import BRADY_START, DB, bills_era_summary, brady_tracker, load_decisions  # noqa: E402
 from off_script import era_table, load_dropbacks  # noqa: E402
 from opponent_adjustment import rank_change, rating_intervals  # noqa: E402
+from stadium_wind import q1_table  # noqa: E402
 
 OUT = Path("data/derived")
 SEASON = BRADY_START
@@ -34,6 +36,7 @@ SEASON = BRADY_START
 def main() -> None:
     con = duckdb.connect(str(DB), read_only=True)
     try:
+        stadium = q1_table(con)
         decisions = load_decisions(con, team="BUF")
         eras = era_table(load_dropbacks(con))
         ratings = rating_intervals(con, SEASON)
@@ -42,6 +45,7 @@ def main() -> None:
         con.close()
 
     tables = {
+        "stadium_q1.csv": stadium,
         "brady_fourth_down_tracker.csv": brady_tracker(decisions),
         "fourth_down_eras.csv": bills_era_summary(decisions),
         "allen_off_script_eras.csv": eras,
@@ -53,7 +57,9 @@ def main() -> None:
         df.write_csv(OUT / name)
 
     with pl.Config(tbl_rows=-1, tbl_cols=-1, float_precision=3, tbl_width_chars=200):
-        print("=== Q2: Bills 4th downs by era ===")
+        print("=== Q1: old vs new Highmark (scored on 'home'; home_minus_away nets out offense/kicker) ===")
+        print(stadium)
+        print("\n=== Q2: Bills 4th downs by era ===")
         print(tables["fourth_down_eras.csv"])
         print("\n=== Q3: Allen by play-caller era ===")
         print(eras)

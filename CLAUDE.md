@@ -37,7 +37,10 @@ Four questions, each falsifiable:
   station. New Highmark is among the furthest NFL stadiums from any station.
   Use `meteostat` (METAR + ISD-Lite) to interpolate hourly, ~3–4 readings/game.
 - There is **no wind direction relative to field orientation** in any public source.
-  Field is roughly north–south; convert station bearing to head/tail/cross yourself.
+  Old Highmark's field runs **302°/122° (NW–SE), not north–south**. Field headings
+  for every stadium are in `data/reference/stadiums.csv` (source in its README).
+  The new Highmark's heading is unmeasured: `NEW_HIGHMARK_HEADING` in `src/weather.py`.
+- nflverse `schedules.gametime` is **always US Eastern**, whatever the venue.
 - NGS is **player-week aggregate**, not per play. Time-to-throw per play does not
   exist publicly. Do not propose analyses that need it.
 - FTN charting is **per play, 2022+**, updated 4×/day in season. It carries
@@ -86,10 +89,11 @@ In progress:
   play-caller: Dorsey OC (2022–Wk 10 2023), Brady OC (Wk 11 2023–2025), Brady
   HC (2026). Brady called plays from late 2023, so "2022–25 vs 2026" is not
   McDermott-vs-Brady. Use `off_rate_vs_league`: FTN's league-wide rate drifts up.
-- Phase 4: `src/weather.py` pulls hourly wind for Bills home games into the
-  `weather` table via `refresh.py`. Still needed before the fit: coordinates for
-  every outdoor stadium, and field azimuths measured for old and new Highmark
-  (both placeholders at 0°).
+- Phase 4: `src/weather.py` pulls hourly wind for every outdoor game 2016+ into
+  the `weather` table via `refresh.py`, with along/cross components per play
+  from each stadium's field heading. `src/stadium_wind.py` has the Q1 scorer
+  (home and away, old vs new). Still needed: the new Highmark's heading
+  (measure it), then the wind -> deep-ball model on all outdoor stadiums.
 
 Weekly: `python refresh.py && python weekly_tracker.py` writes every table the
 post needs to `data/derived/`, including the numbers each logged prediction is

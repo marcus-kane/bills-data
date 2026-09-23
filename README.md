@@ -26,7 +26,7 @@ Question 4 is infrastructure for the other three.
 | 1 | Fourth-down audit | done — live weekly tracker |
 | 2 | Opponent adjustment | done — validated out-of-sample |
 | 3 | Allen off-script | built — awaiting Q3 prediction before first run |
-| 4 | Stadium wind study (capstone) | weather pipeline live (Bills home games) |
+| 4 | Stadium wind study (capstone) | weather for all outdoor stadiums + live Q1 scorer; wind model next |
 | 5 | Publish | not started |
 
 ## Repo layout
@@ -34,7 +34,8 @@ Question 4 is infrastructure for the other three.
 ```
 data/raw/      parquet cache, one dir per source (gitignored)
 data/db/       bills.duckdb (gitignored)
-data/derived/  committed output tables (e.g. the weekly 4th-down tracker)
+data/derived/  committed output tables (the weekly tracker writes these)
+data/reference/ stadium coordinates + field headings (sourced, see its README)
 src/           analysis modules
 notebooks/     exploration only — nothing ships from here
 charting/      hand-charted data + codebook (this is the differentiator)
