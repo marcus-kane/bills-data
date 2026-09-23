@@ -38,6 +38,16 @@ MIN_DROPBACKS = 200  # league-table floor per QB-season; ignored for the current
 N_BOOT = 2000
 MIN_FTN_COVERAGE = 0.95  # share of a game's dropbacks FTN must have charted
 
+# Bills offensive play-caller eras: (label, first (season, week)); each runs
+# until the next starts. Dorsey was fired Nov 14, 2023 after the Week 10 loss
+# to Denver; Brady called plays from Week 11 on, then became head coach in 2026.
+OFFENSE_ERAS = [
+    ("dorsey_oc", (FTN_START, 1)),
+    ("brady_oc", (2023, 11)),
+    ("brady_hc", (BRADY_START, 1)),
+]
+STATS = ("off_rate", "off_rate_vs_league", "epa_on", "epa_off", "gap")
+
 
 def load_dropbacks(con: duckdb.DuckDBPyConnection) -> pl.DataFrame:
     """Every REG-season dropback 2022+ with FTN charting, one row per play.
@@ -142,7 +152,8 @@ def qb_seasons(plays: pl.DataFrame, current_season: int = BRADY_START) -> pl.Dat
 
 def era_shift(plays: pl.DataFrame, passer_id: str = ALLEN_ID, split: int = BRADY_START) -> pl.DataFrame:
     """Before vs after `split` for one QB, with 90% intervals on each era and
-    on the change. This is the Q3 headline table."""
+    on the change. This is what scores the Q3 prediction as logged
+    (2022-25 vs 2026); era_table() is the fairer read, split by play-caller."""
     qb = plays.filter(pl.col("passer_id") == passer_id)
     before, after = qb.filter(pl.col("season") < split), qb.filter(pl.col("season") >= split)
     b_draws, a_draws = bootstrap(before, seed=1), bootstrap(after, seed=2)
@@ -164,6 +175,51 @@ def era_shift(plays: pl.DataFrame, passer_id: str = ALLEN_ID, split: int = BRADY
     )
 
 
+def tag_era(plays: pl.DataFrame) -> pl.DataFrame:
+    """Label each play with its OFFENSE_ERAS era (league-wide, by calendar)."""
+    era = pl.lit(None, dtype=pl.Utf8)
+    for label, (season, week) in OFFENSE_ERAS:  # later eras wrap earlier ones, so they win
+        starts = (pl.col("season") > season) | ((pl.col("season") == season) & (pl.col("week") >= week))
+        era = pl.when(starts).then(pl.lit(label)).otherwise(era)
+    return plays.with_columns(era.alias("era"))
+
+
+def era_table(plays: pl.DataFrame, passer_id: str = ALLEN_ID) -> pl.DataFrame:
+    """One QB across the play-caller eras, each with a 90% interval and the
+    change from the era before it.
+
+    off_rate_vs_league is the QB's off-script rate minus every other QB's
+    over the same weeks. FTN's league-wide out-of-pocket rate drifts up
+    2022-2025 (real trend or looser charting, can't tell which), so this is
+    the version of the rate that survives that drift. The league rate is
+    treated as fixed -- ~15k dropbacks an era, its noise is negligible next
+    to one QB's.
+    """
+    plays = tag_era(plays)
+    is_qb = pl.col("passer_id") == passer_id
+    rows, prev = [], None
+    for i, (label, _) in enumerate(OFFENSE_ERAS):
+        era_plays = plays.filter(pl.col("era") == label)
+        qb = era_plays.filter(is_qb)
+        if qb.is_empty():
+            continue
+        league_rate = era_plays.filter(~is_qb)["off_script"].mean()
+        pt, draws = summarize(qb), bootstrap(qb, seed=i)
+        pt["off_rate_vs_league"] = pt["off_rate"] - league_rate
+        draws["off_rate_vs_league"] = draws["off_rate"] - league_rate
+
+        for stat in STATS:
+            lo, hi = interval(draws[stat])
+            row = {"era": label, "stat": stat, "n": qb.height, "value": pt[stat], "lo": lo, "hi": hi,
+                   "vs_prev": None, "vs_prev_lo": None, "vs_prev_hi": None}
+            if prev:
+                d_lo, d_hi = interval(draws[stat] - prev[1][stat])
+                row |= {"vs_prev": pt[stat] - prev[0][stat], "vs_prev_lo": d_lo, "vs_prev_hi": d_hi}
+            rows.append(row)
+        prev = (pt, draws)
+    return pl.DataFrame(rows)
+
+
 def _check_bootstrap() -> None:
     # 10 games x 10 plays, exactly 3 off-script per game: every draw has off_rate 0.3
     fake = pl.DataFrame({
@@ -174,6 +230,9 @@ def _check_bootstrap() -> None:
     d = bootstrap(fake, n_boot=200)
     assert np.allclose(d["off_rate"], 0.3) and np.allclose(d["gap"], 1.0), d
     assert summarize(fake)["gap"] == 1.0
+
+    eras = tag_era(pl.DataFrame({"season": [2022, 2023, 2023, 2025, 2026], "week": [18, 10, 11, 1, 1]}))["era"]
+    assert eras.to_list() == ["dorsey_oc", "dorsey_oc", "brady_oc", "brady_oc", "brady_hc"], eras
 
 
 def _demo() -> None:
@@ -188,6 +247,8 @@ def _demo() -> None:
     with pl.Config(tbl_rows=40, tbl_cols=-1, float_precision=3):
         print("=== Allen: 2022-2025 vs Brady era, 90% game-clustered intervals, opp-adjusted EPA ===")
         print(era_shift(plays))
+        print("\n=== Allen by play-caller era: Dorsey OC / Brady OC / Brady HC (vs_prev = change from era before) ===")
+        print(era_table(plays))
         print("\n=== League off-script rate, QB-seasons (>= %d dropbacks, all 2026) ===" % MIN_DROPBACKS)
         print(qb_seasons(plays).filter(pl.col("passer_id") == ALLEN_ID))
         print(qb_seasons(plays).group_by("season").agg(

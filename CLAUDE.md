@@ -78,8 +78,10 @@ Phases 0–2 done: `refresh.py` pipeline, fourth-down audit + live Brady tracker
 
 In progress:
 - Phase 3: `src/off_script.py` computes Allen's out-of-pocket rate and on/off-script
-  gap with game-clustered bootstrap intervals. Built but results not yet
-  looked at. Q3 prediction goes in `predictions.md` first.
+  gap with game-clustered bootstrap intervals. `era_table()` splits Allen by
+  play-caller: Dorsey OC (2022–Wk 10 2023), Brady OC (Wk 11 2023–2025), Brady
+  HC (2026). Brady called plays from late 2023, so "2022–25 vs 2026" is not
+  McDermott-vs-Brady. Use `off_rate_vs_league`: FTN's league-wide rate drifts up.
 - Phase 4: `src/weather.py` pulls hourly wind for Bills home games into the
   `weather` table via `refresh.py`. Still needed before the fit: coordinates for
   every outdoor stadium, and field azimuths measured for old and new Highmark
