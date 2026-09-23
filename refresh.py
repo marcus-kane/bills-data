@@ -11,6 +11,7 @@ Bills game (and any Tuesday once nflverse has finished the nightly update).
 from __future__ import annotations
 
 import argparse
+import sys
 import tempfile
 import warnings
 from pathlib import Path
@@ -20,6 +21,9 @@ import nfl_data_py as nfl
 import pandas as pd
 import pyreadr
 import requests
+
+sys.path.insert(0, str(Path(__file__).parent / "src"))
+import weather  # noqa: E402
 
 CURRENT_SEASON = 2026
 HISTORY_START = 2016      # pbp / NGS / participation floor
@@ -76,6 +80,8 @@ SOURCES = {
     "schedules": (HISTORY_START, lambda season: nfl.import_schedules([season])),
     "injuries": (HISTORY_START, lambda season: nfl.import_injuries([season])),
     "nfl4th_go_boost": (HISTORY_START, _fetch_nfl4th),
+    # must stay after "schedules": reads that season's schedule parquet
+    "weather": (HISTORY_START, weather.fetch_season),
 }
 
 

@@ -27,9 +27,9 @@ Four questions, each falsifiable:
 - Data lands as parquet in `data/raw/`, loads into one DuckDB file at `data/db/bills.duckdb`.
 - `refresh.py` re-pulls only the current season. Keep it working — the pipeline is
   the point, not the notebooks.
-- `nfl4th` is R-only. Default to reading its precomputed parquet
-  (`load_4th_pbp(fast = TRUE)`, 2014+) from the nflverse release rather than
-  shelling out to R. Only reach for R if that route fails.
+- `nfl4th` is R-only. Its precomputed decisions ship as per-season `.rds` on the
+  nflverse release (no parquet upstream); `refresh.py` reads them with `pyreadr`.
+  No R needed.
 
 ## Data facts worth not re-learning
 
@@ -43,6 +43,10 @@ Four questions, each falsifiable:
 - FTN charting is **per play, 2022+**, updated 4×/day in season. It carries
   `is_qb_out_of_pocket`, `read_thrown`, `n_pass_rushers`, `is_throwaway`,
   motion, play action, RPO, screen, QB alignment. This is what makes Q2 and Q3 work.
+- FTN charts in batches, so the latest week is often partial. `src/off_script.py`
+  drops any game under 95% charted rather than using a partial chart.
+- `meteostat` is on the 2.x API. Wind direction must be blended as u/v vectors,
+  never averaged as degrees (`src/weather.py`).
 - Participation data (personnel, coverage, man/zone) is **postseason only** — useless
   for in-season weekly posts.
 - n for the new stadium this season is ~9–10 home games. Nothing stadium-specific
@@ -65,11 +69,21 @@ Four questions, each falsifiable:
 
 ## Current state
 
-Phase 0 — the spine. `refresh.py` is a stub with the structure laid out and
-`NotImplementedError` in `pull()` and `build_db()`. Next: wire up the nfl_data_py
-pulls and the DuckDB load, then Phase 1 (fourth-down audit, the fastest win).
+Phases 0–2 done: `refresh.py` pipeline, fourth-down audit + live Brady tracker
+(`src/fourth_down.py`, `weekly_tracker.py`), opponent-adjusted EPA
+(`src/opponent_adjustment.py`).
+
+In progress:
+- Phase 3: `src/off_script.py` computes Allen's out-of-pocket rate and on/off-script
+  gap with game-clustered bootstrap intervals. Built but results not yet
+  looked at. Q3 prediction goes in `predictions.md` first.
+- Phase 4: `src/weather.py` pulls hourly wind for Bills home games into the
+  `weather` table via `refresh.py`. Still needed before the fit: coordinates for
+  every outdoor stadium, and field azimuths measured for old and new Highmark
+  (both placeholders at 0°).
+
+Not started: first weekly post, hand-charting codebook, Phase 5.
 
 Open decisions, unresolved:
 - Project name, and whether it gets its own domain
 - Hand-charting variable: wind direction relative to throw, or motion type
-- All-Python-with-an-R-shim, or accept R for the modeling steps

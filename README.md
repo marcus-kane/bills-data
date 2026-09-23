@@ -25,8 +25,8 @@ Question 4 is infrastructure for the other three.
 | 0 | Spine: data pull, cache, DuckDB, `refresh.py` | done |
 | 1 | Fourth-down audit | done — live weekly tracker |
 | 2 | Opponent adjustment | done — validated out-of-sample |
-| 3 | Allen off-script | not started |
-| 4 | Stadium wind study (capstone) | not started |
+| 3 | Allen off-script | built — awaiting Q3 prediction before first run |
+| 4 | Stadium wind study (capstone) | weather pipeline live (Bills home games) |
 | 5 | Publish | not started |
 
 ## Repo layout

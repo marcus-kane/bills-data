@@ -11,7 +11,7 @@ requests>=2.30
 pyreadr>=0.5  # reads nfl4th's precomputed 4th-down .rds releases (no parquet upstream)
 
 # Weather interpolation (project 1)
-meteostat>=1.6.8
+meteostat>=2.1  # 2.x API (hourly/stations.nearby/Point); 1.x is incompatible
 
 # Modeling (project 2 opponent adjustment)
 numpy>=1.26
