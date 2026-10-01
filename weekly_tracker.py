@@ -10,6 +10,7 @@ Writes:
     stadium_q1.csv                 Bills deep-ball success + FG%, old vs new stadium (Q1)
     brady_fourth_down_tracker.csv  every Brady-era 4th down, running totals
     fourth_down_eras.csv           McDermott vs Brady, incl. Q2's go-rate on go-calls
+    fourth_down_league.csv         all 32 teams 2017-2025, with intervals (post 1, chart 1)
     allen_off_script_eras.csv      Allen by play-caller era (Q3)
     team_ratings_<season>.csv      opponent-adjusted ratings + rank intervals (Q4)
     bills_defense_rank_change.csv  Bills defense rank vs the prior season (Q4 as logged)
@@ -24,7 +25,7 @@ import duckdb
 import polars as pl
 
 sys.path.insert(0, str(Path(__file__).parent / "src"))
-from fourth_down import BRADY_START, DB, bills_era_summary, brady_tracker, load_decisions  # noqa: E402
+from fourth_down import BRADY_START, DB, bills_era_summary, brady_tracker, load_decisions, team_summary  # noqa: E402
 from off_script import era_table, load_dropbacks  # noqa: E402
 from opponent_adjustment import rank_change, rating_intervals  # noqa: E402
 from stadium_wind import q1_table  # noqa: E402
@@ -37,7 +38,7 @@ def main() -> None:
     con = duckdb.connect(str(DB), read_only=True)
     try:
         stadium = q1_table(con)
-        decisions = load_decisions(con, team="BUF")
+        decisions = load_decisions(con)  # all teams: the league table needs them
         eras = era_table(load_dropbacks(con))
         ratings = rating_intervals(con, SEASON)
         defense = pl.DataFrame([rank_change(con, "BUF", "def", SEASON - 1, SEASON)])
@@ -48,6 +49,7 @@ def main() -> None:
         "stadium_q1.csv": stadium,
         "brady_fourth_down_tracker.csv": brady_tracker(decisions),
         "fourth_down_eras.csv": bills_era_summary(decisions),
+        "fourth_down_league.csv": team_summary(decisions),
         "allen_off_script_eras.csv": eras,
         f"team_ratings_{SEASON}.csv": ratings,
         "bills_defense_rank_change.csv": defense,

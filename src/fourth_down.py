@@ -20,7 +20,10 @@ import duckdb
 import numpy as np
 import polars as pl
 
+from opponent_adjustment import MIN_GAMES
+
 DB = Path("data/db/bills.duckdb")
+N_BOOT = 2000
 MCDERMOTT_START = 2017  # Rex Ryan/Anthony Lynn through 2016; McDermott hired 2017
 BRADY_START = 2026      # Joe Brady's first season as Bills head coach
 
@@ -74,18 +77,57 @@ def load_decisions(con: duckdb.DuckDBPyConnection, team: str | None = None) -> p
     )
 
 
-def team_summary(decisions: pl.DataFrame) -> pl.DataFrame:
-    """Leaguewide benchmark: one row per team, ranked by average WP cost."""
+def team_summary(
+    decisions: pl.DataFrame,
+    seasons: tuple[int, int] = (MCDERMOTT_START, BRADY_START - 1),
+    n_boot: int = N_BOOT,
+    seed: int = 0,
+) -> pl.DataFrame:
+    """Leaguewide benchmark over the McDermott years: one row per team, ranked
+    by average WP cost, with 90% intervals on every rate. Includes Q2's metric
+    (go rate on the model's go-calls) so the Bills' number has league context."""
+    d = decisions.filter(pl.col("season").is_between(*seasons))
+    go_call = pl.col("best_decision") == "go"
     return (
-        decisions.group_by("posteam")
+        d.group_by("posteam")
         .agg(
             pl.len().alias("n_fourth_downs"),
-            pl.col("followed_baseline").mean().alias("pct_followed_baseline"),
+            pl.col("game_id").n_unique().alias("n_games"),
+            pl.col("followed_baseline").sum().alias("n_followed"),
             pl.col("wp_cost_pts").mean().alias("avg_wp_cost_pts"),
             pl.col("wp_cost_pts").sum().alias("total_wp_cost_pts"),
+            go_call.sum().alias("n_go_calls"),
+            (pl.col("actual_decision") == "go").filter(go_call).sum().alias("went_on_go_calls"),
         )
+        .with_columns(
+            _wilson("n_followed", "n_fourth_downs", "pct_followed_baseline")
+            + _wilson("went_on_go_calls", "n_go_calls", "go_rate_on_go_calls")
+        )
+        .drop("n_followed")
+        .join(_cost_interval(d, n_boot, seed), on="posteam")
         .sort("avg_wp_cost_pts")
     )
+
+
+def _cost_interval(d: pl.DataFrame, n_boot: int, seed: int, level: float = 0.9) -> pl.DataFrame:
+    """90% game-clustered bootstrap on each team's average WP cost. Cost is
+    mostly zeros with a few big misses, so the spread comes from which games
+    land in the resample, not from individual calls."""
+    rng = np.random.default_rng(seed)
+    per_game = d.group_by("posteam", "game_id").agg(
+        pl.col("wp_cost_pts").sum().alias("cost"),
+        pl.col("wp_cost_pts").count().alias("n"),  # non-null, to match mean()
+    )
+    rows = []
+    for g in per_game.partition_by("posteam"):
+        cost, n = g["cost"].to_numpy(), g["n"].to_numpy()
+        if len(n) < MIN_GAMES:
+            lo, hi = np.nan, np.nan
+        else:
+            idx = rng.integers(0, len(n), size=(n_boot, len(n)))
+            lo, hi = np.quantile(cost[idx].sum(1) / n[idx].sum(1), [(1 - level) / 2, (1 + level) / 2])
+        rows.append((g["posteam"][0], lo, hi))
+    return pl.DataFrame(rows, schema=["posteam", "avg_wp_cost_pts_lo", "avg_wp_cost_pts_hi"], orient="row")
 
 
 def bills_era_summary(decisions: pl.DataFrame) -> pl.DataFrame:
@@ -156,9 +198,19 @@ def _demo() -> None:
     assert set(decisions["actual_decision"].unique()) <= {"go", "punt", "field_goal"}
     assert decisions.filter(pl.col("posteam") == "BUF").height > 0, "no Bills 4th downs found"
 
-    with pl.Config(tbl_rows=32):
-        print("=== leaguewide, most to least aggressive-and-correct ===")
-        print(team_summary(decisions))
+    # constant cost per game -> the bootstrap has nothing to vary, interval collapses
+    flat = pl.DataFrame({"posteam": ["X"] * 10, "game_id": [str(i // 2) for i in range(10)], "wp_cost_pts": [1.0, 3.0] * 5})
+    assert np.allclose(_cost_interval(flat, 200, 0).row(0)[1:], (2.0, 2.0))
+
+    # the league table's Bills row must agree with the era table's McDermott row
+    league = team_summary(decisions)
+    buf = league.filter(pl.col("posteam") == "BUF").row(0, named=True)
+    mcd = bills_era_summary(decisions).filter(pl.col("era").str.starts_with("mcdermott")).row(0, named=True)
+    assert (buf["n_fourth_downs"], buf["n_go_calls"], buf["went_on_go_calls"]) == (mcd["n"], mcd["n_go_calls"], mcd["went_on_go_calls"]), (buf, mcd)
+
+    with pl.Config(tbl_rows=32, tbl_cols=-1, tbl_width_chars=250):
+        print(f"=== leaguewide {MCDERMOTT_START}-{BRADY_START - 1}, lowest avg WP cost first ===")
+        print(league)
         print("\n=== Bills: McDermott era vs Brady 2026 ===")
         print(bills_era_summary(decisions))
 
