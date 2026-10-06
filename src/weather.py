@@ -48,6 +48,11 @@ NEW_HIGHMARK_SEASON = 2026
 SCHEDULE_TZ = "America/New_York"
 
 N_STATIONS = 4
+
+# meteostat caches each station-year file for 30 days by default, so a weekly
+# refresh kept re-reading the current season as of the first pull and the
+# newest games came back empty. 6h still reuses files within one run.
+ms.config.cache_ttl = 6 * 60 * 60
 PAD = timedelta(hours=1)          # pull an hour either side of the game
 GAME_LENGTH = timedelta(hours=4)  # generous; OT games still fit
 
