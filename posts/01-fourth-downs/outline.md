@@ -1,7 +1,7 @@
 # Post 1 — Fourth downs: the McDermott baseline, and Brady's first four games
 
-Outline only. Prose is Marcus's. Numbers below are **through Week 4**
-(refreshed 2026-10-06, includes the 29–26 loss to NE).
+Outline only. Prose is Marcus's. Numbers below are **through Week 6**
+(refreshed 2026-10-20: 37–34 OT win at LA, 33–30 win at LV).
 
 Target: ~800 words, 2 charts, 1 table. Ships this week.
 
@@ -11,7 +11,7 @@ Target: ~800 words, 2 charts, 1 table. Ships this week.
 
 - The question as logged: is Brady a better 4th-down decision maker than McDermott?
 - Say up front what the post is and isn't: McDermott's full record is a real
-  sample (n = 1,045). Brady's is 4 games. This post sets the baseline and starts
+  sample (n = 1,045). Brady's is 6 games. This post sets the baseline and starts
   the clock; it doesn't answer the question yet.
 - Link to `predictions.md`. The Q2 prediction is public and timestamped, and says
   it was logged after Brady's Weeks 1–2 were run.
@@ -51,18 +51,24 @@ Target: ~800 words, 2 charts, 1 table. Ships this week.
     since it cuts against the Q2 prediction's "Why."
   - Rank is soft: the Bills' cost interval overlaps most of the top half. Don't
     headline "5th." Headline "top-third, and statistically bunched with the pack."
-- **Chart 1:** all 32 teams, avg WP cost as a dot + 90% bar, sorted, Bills
-  highlighted. Second panel (or a follow-up chart): go rate on go-calls, same form.
+- **Chart 1:** `figures/post1_chart1a_league_cost.png` (avg WP cost, 90%
+  bootstrap bar) and `figures/post1_chart1b_league_go_rate.png` (go rate on
+  go-calls, 90% Wilson bar). Both sorted best-on-top, Bills highlighted.
+  Rebuild with `python posts/01-fourth-downs/charts.py`.
 - Football read (Marcus): where did McDermott leave value? Pick one or two famous
   punts/FGs from the tracker to make it concrete (search `decisions` for the
   biggest `wp_cost_pts`).
 
 ## 5. Brady so far
 
-- Through Week 4: 18 fourth downs, followed the model 13/18 (72.2%), total
-  WP cost 4.31 pts (avg 0.24/4th down vs McDermott's 0.30).
+- Through Week 6: 27 fourth downs, followed the model 22/27 (81.5%), total
+  WP cost 4.31 pts (avg 0.16/4th down vs McDermott's 0.30).
 - Go-calls: went on **4 of 9** (44.4%). The 90% CI is **22%–70%**. McDermott's
   40.5% sits in the middle of it, so there is no separation at all yet.
+- **The West Coast trip didn't test him.** 9 fourth downs at LA and LV, 9 of 9
+  with the model, 0.00 WP cost. But all 9 were punts or FGs the model also
+  wanted: zero go-calls in two games. A clean two weeks is not evidence of
+  aggressiveness; it's the absence of a test. Say that, or a reader will.
   Show that interval on purpose. It's the honest reason this post can't declare
   a winner.
 - **The NE game is the story.** Through Week 3 he was 11/12 with the model, 3 of
@@ -84,16 +90,17 @@ Target: ~800 words, 2 charts, 1 table. Ships this week.
 - Week 1 at HOU, 4th & 1 at the 34, Q1: went for it, EPA −4.2. The model said
   go and the model was right, even though the play failed. That's the teaching
   moment: grade the decision, not the result.
-- **Chart 2:** Brady cumulative % followed / cumulative WP cost by week
-  (`brady_fourth_down_tracker.csv`), with McDermott's era average as a flat
-  reference line. The Week 4 step is the chart.
+- **Chart 2:** `figures/post1_chart2_brady_pace.png`. Brady's cumulative WP
+  cost per 4th down vs McDermott's pace (0.30 × downs). The NE staircase is
+  the chart, and so is the flat line after it.
 
 ## 6. What would change my mind / what to watch
 
-- How many go-calls before the interval means anything? McDermott saw ~2.4 per
-  game (400 over 9 seasons). Brady has seen 9 in 4 games. At that pace
-  it's ~40 by season's end, a 90% band of roughly ±13 pts. That's enough to
-  separate "went 40%" from "went 70%", but not 40% from 50%. Say so, with the number.
+- How many go-calls before the interval means anything? McDermott saw ~2.5 per
+  game (400 in 163 games). Brady has seen 9 in 6 games (1.5/game, and none in
+  Weeks 5–6). At that pace it's ~25 by season's end, a 90% band of roughly
+  ±16 pts. That separates "went 40%" from "went 75%" and nothing finer. Q2 may
+  not be answerable from 2026 alone. Say so, with the number.
 - What would count as Brady being "the same as McDermott": say it now,
   before the data arrives.
 
@@ -107,6 +114,7 @@ Target: ~800 words, 2 charts, 1 table. Ships this week.
 ## Checklist before publish
 
 - [x] Week 4 landed: refresh + tracker re-run, section 5 updated (2026-10-06)
-- [ ] Both charts with intervals shown
+- [x] Week 6 landed: section 5 + section 6 updated (2026-10-20)
+- [x] Both charts with intervals shown (`posts/01-fourth-downs/charts.py`)
 - [ ] Every number traceable to a file in `data/derived/`
 - [ ] Decide where it's hosted (Quarto → GitHub Pages as the default)
