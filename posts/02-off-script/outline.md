@@ -99,7 +99,7 @@ on-script value as a hollow marker on the same row. One axis (EPA/play).
 
 ## Checklist before publish
 
-- [ ] Chart built from `allen_off_script_eras.csv` (script next to this file)
+- [x] Chart: `figures/post2_chart_off_script_eras.png`, rebuilt by `python posts/02-off-script/charts.py`
 - [ ] Week 8 (BAL, Nov 1) refresh if it slips past the bye
 - [ ] Film check on LV out-of-pocket plays (designed vs broken)
 - [ ] Every number traceable to `data/derived/` or a function in `src/`
